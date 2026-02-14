@@ -23,7 +23,7 @@ if (Platform.OS !== "web") {
 }
 
 const PRIMARY_URL = "https://doubleds.vercel.app/";
-const FALLBACK_URL = "https://filme-indol-one.vercel.app/";
+const FALLBACK_URL = "https://doubleiasss.vercel.app/";
 
 const INJECTED_JS = `
   (function() {
