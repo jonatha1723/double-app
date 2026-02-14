@@ -1,22 +1,24 @@
 # Project TODO
 
+## Implementado
 - [x] Configurar tema e cores do app (paleta Double)
 - [x] Gerar logo personalizada do app
 - [x] Configurar branding no app.config.ts
-- [x] Configurar estrutura de navegação (Auth Stack + Main Tabs)
-- [x] Tela de Login (email/senha)
-- [x] Tela de Cadastro
-- [x] Integração Firebase Auth (email/senha)
-- [ ] Login com Google Sign-In (opcional - usar Firebase GoogleAuthProvider)
-- [x] WebView principal carregando site primário
+- [x] Remover tela de login - ir direto para WebView
+- [x] Remover abas de Downloads e Arquivos - apenas WebView
+- [x] WebView principal carregando site primário (tela cheia)
 - [x] Fallback automático para site alternativo
 - [x] JS ↔ Native bridge (comunicação bidirecional)
 - [x] Sistema de atualizações automáticas (JSON endpoint)
 - [x] Notificação de atualização via JS bridge
-- [x] Tela de atualização estilo chat
-- [x] Download de APK com barra de progresso (simulado)
-- [x] Gerenciamento de downloads (lista de arquivos baixados)
-- [x] Upload de arquivos para Firebase Storage
-- [x] Navegação e gerenciamento de arquivos locais (Firebase Cloud Storage)
-- [ ] Permissões nativas dinâmicas (armazenamento, etc.) (opcional - implementar conforme necessário)
-- [ ] Cache inteligente para uso offline (implementar conforme necessário)
+- [x] Sistema de download de APK com permissão de fontes desconhecidas
+- [x] Download de APK com barra de progresso
+- [x] Instalação de APK no Android
+- [x] Tratamento robusto de erros
+- [x] Suporte a permissões de instalação de fontes desconhecidas
+- [x] Corrigir bundle ID para evitar palavras-chave Java
+
+## Opcional (Futuro)
+- [ ] Testes em dispositivo real
+- [ ] Adicionar Google Sign-In
+- [ ] Cache inteligente para uso offline

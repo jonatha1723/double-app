@@ -18,9 +18,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
-import { AuthProvider } from "@/lib/auth-context";
 import { UpdateProvider } from "@/lib/update-context";
-import { DownloadsProvider } from "@/lib/downloads-context";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -83,20 +81,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <UpdateProvider>
-              <DownloadsProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="login" options={{ presentation: "fullScreenModal" }} />
-                  <Stack.Screen name="register" options={{ presentation: "fullScreenModal" }} />
-                  <Stack.Screen name="update" options={{ presentation: "modal" }} />
-                  <Stack.Screen name="oauth/callback" />
-                </Stack>
-                <StatusBar style="auto" />
-              </DownloadsProvider>
-            </UpdateProvider>
-          </AuthProvider>
+          <UpdateProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="oauth/callback" />
+            </Stack>
+            <StatusBar style="auto" />
+          </UpdateProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>

@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   Platform,
   StyleSheet,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
-import { useFirebaseAuth } from "@/lib/auth-context";
 import { useUpdate } from "@/lib/update-context";
-import { useDownloads } from "@/lib/downloads-context";
 import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
 
 let WebView: any = null;
 if (Platform.OS !== "web") {
@@ -36,6 +35,13 @@ const INJECTED_JS = `
           url: url,
           message: message
         }));
+      },
+      downloadAPK: function(url, filename) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'downloadAPK',
+          url: url,
+          filename: filename || 'app.apk'
+        }));
       }
     };
 
@@ -47,15 +53,18 @@ const INJECTED_JS = `
       }
       if (target && target.href) {
         var href = target.href.toLowerCase();
+        var isAPK = href.endsWith('.apk');
         var downloadExts = ['.apk', '.pdf', '.zip', '.mp4', '.mp3', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.gif'];
         var isDownload = downloadExts.some(function(ext) { return href.endsWith(ext); });
         if (isDownload || target.hasAttribute('download')) {
           e.preventDefault();
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'download',
-            url: target.href,
-            filename: target.getAttribute('download') || target.href.split('/').pop()
-          }));
+          if (isAPK) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'downloadAPK',
+              url: target.href,
+              filename: target.getAttribute('download') || target.href.split('/').pop() || 'app.apk'
+            }));
+          }
         }
       }
     }, true);
@@ -65,45 +74,82 @@ const INJECTED_JS = `
 `;
 
 export default function HomeScreen() {
-  const router = useRouter();
   const colors = useColors();
-  const { user, loading: authLoading } = useFirebaseAuth();
   const { handleJsBridgeUpdate, updateAvailable } = useUpdate();
-  const { addDownload } = useDownloads();
 
   const webViewRef = useRef<any>(null);
   const [currentUrl, setCurrentUrl] = useState(PRIMARY_URL);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/login" as any);
-    }
-  }, [authLoading, user, router]);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const handleWebViewMessage = useCallback(
     (event: any) => {
       try {
         const data = JSON.parse(event.nativeEvent.data);
+
         if (data.type === "update") {
           handleJsBridgeUpdate(data.version, data.url, data.message);
-        } else if (data.type === "download") {
-          addDownload({
-            name: data.filename || "arquivo",
-            uri: data.url,
-            size: 0,
-            mimeType: "application/octet-stream",
-          });
+        } else if (data.type === "downloadAPK") {
+          handleAPKDownload(data.url, data.filename);
         }
       } catch (err) {
         console.log("WebView message parse error:", err);
       }
     },
-    [handleJsBridgeUpdate, addDownload]
+    [handleJsBridgeUpdate]
   );
+
+  const handleAPKDownload = useCallback(async (url: string, filename: string) => {
+    try {
+      // Request permission first
+      const hasPermission = await requestUnknownSourcesPermission();
+      if (!hasPermission && Platform.OS === "android") {
+        Alert.alert(
+          "Permissão necessária",
+          "Por favor, ative a instalação de aplicativos de fontes desconhecidas nas configurações"
+        );
+        return;
+      }
+
+      setIsDownloading(true);
+      setDownloadProgress(0);
+
+      const apk = await downloadAPK(url, filename, (progress) => {
+        setDownloadProgress(Math.round(progress * 100));
+      });
+
+      setIsDownloading(false);
+
+      if (apk && Platform.OS === "android") {
+        Alert.alert(
+          "Download concluído",
+          `${filename} foi baixado com sucesso. Deseja instalar agora?`,
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Instalar",
+              onPress: async () => {
+                try {
+                  await installAPK(apk.localPath);
+                } catch (err: any) {
+                  Alert.alert("Erro", `Falha ao instalar: ${err.message}`);
+                }
+              },
+            },
+          ]
+        );
+      } else if (Platform.OS === "web") {
+        Alert.alert("Download iniciado", "O arquivo foi baixado no seu navegador");
+      }
+    } catch (err: any) {
+      setIsDownloading(false);
+      console.error("APK download error:", err);
+      Alert.alert("Erro no download", err.message || "Falha ao baixar o arquivo");
+    }
+  }, []);
 
   const handleLoadError = useCallback(() => {
     if (!usedFallback) {
@@ -123,34 +169,29 @@ export default function HomeScreen() {
     setIsLoading(true);
   }, []);
 
-  if (authLoading) {
-    return (
-      <ScreenContainer className="items-center justify-center">
-        <ActivityIndicator size="large" color={colors.primary} />
-      </ScreenContainer>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  // Web platform fallback - show iframe or link
+  // Web platform fallback - show iframe
   if (Platform.OS === "web") {
     return (
       <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
-        {/* Update banner */}
-        {updateAvailable && (
-          <TouchableOpacity
-            onPress={() => router.push("/update" as any)}
-            className="flex-row items-center justify-center py-2 px-4"
-            style={{ backgroundColor: colors.primary }}
-          >
-            <MaterialIcons name="system-update" size={18} color="#fff" />
-            <Text className="text-sm font-medium ml-2" style={{ color: "#fff" }}>
-              Nova atualização disponível!
-            </Text>
-          </TouchableOpacity>
+        {isDownloading && (
+          <View className="px-4 py-2 bg-primary/10">
+            <View className="flex-row justify-between mb-1">
+              <Text className="text-xs text-muted">Baixando...</Text>
+              <Text className="text-xs text-muted">{downloadProgress}%</Text>
+            </View>
+            <View
+              className="h-2 rounded-full overflow-hidden"
+              style={{ backgroundColor: colors.border }}
+            >
+              <View
+                className="h-full rounded-full"
+                style={{
+                  backgroundColor: colors.primary,
+                  width: `${downloadProgress}%`,
+                }}
+              />
+            </View>
+          </View>
         )}
         <View style={styles.webContainer}>
           <iframe
@@ -167,21 +208,28 @@ export default function HomeScreen() {
     );
   }
 
-  // Native WebView
+  // Native WebView - full screen
   return (
     <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
-      {/* Update banner */}
-      {updateAvailable && (
-        <TouchableOpacity
-          onPress={() => router.push("/update" as any)}
-          className="flex-row items-center justify-center py-2 px-4"
-          style={{ backgroundColor: colors.primary }}
-        >
-          <MaterialIcons name="system-update" size={18} color="#fff" />
-          <Text className="text-sm font-medium ml-2" style={{ color: "#fff" }}>
-            Nova atualização disponível!
-          </Text>
-        </TouchableOpacity>
+      {isDownloading && (
+        <View className="px-4 py-2" style={{ backgroundColor: colors.surface }}>
+          <View className="flex-row justify-between mb-1">
+            <Text className="text-xs text-muted">Baixando APK...</Text>
+            <Text className="text-xs text-muted">{downloadProgress}%</Text>
+          </View>
+          <View
+            className="h-2 rounded-full overflow-hidden"
+            style={{ backgroundColor: colors.border }}
+          >
+            <View
+              className="h-full rounded-full"
+              style={{
+                backgroundColor: colors.primary,
+                width: `${downloadProgress}%`,
+              }}
+            />
+          </View>
+        </View>
       )}
 
       {hasError ? (
@@ -237,6 +285,8 @@ export default function HomeScreen() {
                   <ActivityIndicator size="large" color={colors.primary} />
                 </View>
               )}
+              scalesPageToFit={true}
+              originWhitelist={["*"]}
             />
           )}
         </>
