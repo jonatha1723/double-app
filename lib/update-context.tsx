@@ -4,6 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const APP_VERSION = "1.0.0";
 const UPDATE_CHECK_URL = "https://doubleds.vercel.app/api/version";
 const UPDATE_CHECK_KEY = "double_last_update_check";
+const UPDATE_INFO_KEY = "double_update_info";
+const UPDATE_DISMISSED_KEY = "double_update_dismissed";
 
 export type UpdateInfo = {
   latestVersion: string;
@@ -11,21 +13,13 @@ export type UpdateInfo = {
   message: string;
 };
 
-type UpdateMessage = {
-  id: string;
-  type: "system" | "user";
-  text: string;
-  timestamp: Date;
-};
-
 type UpdateContextType = {
   updateAvailable: boolean;
   updateInfo: UpdateInfo | null;
-  messages: UpdateMessage[];
   downloadProgress: number;
   isDownloading: boolean;
   checkForUpdate: () => Promise<void>;
-  dismissUpdate: () => void;
+  dismissUpdate: () => Promise<void>;
   startDownload: () => void;
   handleJsBridgeUpdate: (version: string, url: string, message: string) => void;
 };
@@ -35,20 +29,30 @@ const UpdateContext = createContext<UpdateContextType | null>(null);
 export function UpdateProvider({ children }: { children: React.ReactNode }) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [messages, setMessages] = useState<UpdateMessage[]>([]);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const addMessage = useCallback((type: "system" | "user", text: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        type,
-        text,
-        timestamp: new Date(),
-      },
-    ]);
+  // Load persisted update info on mount
+  useEffect(() => {
+    const loadPersistedUpdate = async () => {
+      try {
+        const dismissed = await AsyncStorage.getItem(UPDATE_DISMISSED_KEY);
+        if (dismissed === "true") {
+          return; // User dismissed the update
+        }
+
+        const stored = await AsyncStorage.getItem(UPDATE_INFO_KEY);
+        if (stored) {
+          const info = JSON.parse(stored);
+          setUpdateInfo(info);
+          setUpdateAvailable(true);
+        }
+      } catch (err) {
+        console.error("Failed to load persisted update:", err);
+      }
+    };
+
+    loadPersistedUpdate();
   }, []);
 
   const checkForUpdate = useCallback(async () => {
@@ -64,11 +68,9 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
           };
           setUpdateInfo(info);
           setUpdateAvailable(true);
-          addMessage("system", info.message);
-          addMessage(
-            "system",
-            `Versão atual: ${APP_VERSION} → Nova versão: ${info.latestVersion}`
-          );
+          // Persist the update info
+          await AsyncStorage.setItem(UPDATE_INFO_KEY, JSON.stringify(info));
+          await AsyncStorage.removeItem(UPDATE_DISMISSED_KEY);
         }
       }
     } catch (err) {
@@ -76,10 +78,10 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
       console.log("Update check failed:", err);
     }
     await AsyncStorage.setItem(UPDATE_CHECK_KEY, new Date().toISOString());
-  }, [addMessage]);
+  }, []);
 
   const handleJsBridgeUpdate = useCallback(
-    (version: string, url: string, message: string) => {
+    async (version: string, url: string, message: string) => {
       if (version !== APP_VERSION) {
         const info: UpdateInfo = {
           latestVersion: version,
@@ -88,24 +90,26 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
         };
         setUpdateInfo(info);
         setUpdateAvailable(true);
-        addMessage("system", message);
-        addMessage("system", `Versão atual: ${APP_VERSION} → Nova versão: ${version}`);
+        // Persist the update info
+        await AsyncStorage.setItem(UPDATE_INFO_KEY, JSON.stringify(info));
+        await AsyncStorage.removeItem(UPDATE_DISMISSED_KEY);
       }
     },
-    [addMessage]
+    []
   );
 
-  const dismissUpdate = useCallback(() => {
+  const dismissUpdate = useCallback(async () => {
     setUpdateAvailable(false);
-    setMessages([]);
+    setUpdateInfo(null);
     setDownloadProgress(0);
     setIsDownloading(false);
+    // Persist dismissal
+    await AsyncStorage.setItem(UPDATE_DISMISSED_KEY, "true");
   }, []);
 
   const startDownload = useCallback(() => {
     if (!updateInfo) return;
     setIsDownloading(true);
-    addMessage("system", "Iniciando download da atualização...");
 
     // Simulate download progress for demo (on real device, use DownloadManager)
     let progress = 0;
@@ -115,11 +119,10 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
         progress = 100;
         clearInterval(interval);
         setIsDownloading(false);
-        addMessage("system", "Download concluído! Toque para instalar.");
       }
       setDownloadProgress(Math.min(progress, 100));
     }, 500);
-  }, [updateInfo, addMessage]);
+  }, [updateInfo]);
 
   // Check for updates on mount
   useEffect(() => {
@@ -141,7 +144,6 @@ export function UpdateProvider({ children }: { children: React.ReactNode }) {
       value={{
         updateAvailable,
         updateInfo,
-        messages,
         downloadProgress,
         isDownloading,
         checkForUpdate,

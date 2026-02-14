@@ -5,12 +5,14 @@
 - [x] Gerar logo personalizada do app
 - [x] Configurar branding no app.config.ts
 - [x] Remover tela de login - ir direto para WebView
-- [x] Remover abas de Downloads e Arquivos - apenas WebView
+- [x] Remover abas completamente - apenas WebView tela cheia
 - [x] WebView principal carregando site primário (tela cheia)
 - [x] Fallback automático para site alternativo
 - [x] JS ↔ Native bridge (comunicação bidirecional)
 - [x] Sistema de atualizações automáticas (JSON endpoint)
 - [x] Notificação de atualização via JS bridge
+- [x] Botão flutuante persistente de atualização
+- [x] Atualização persiste mesmo fechando o app (AsyncStorage)
 - [x] Sistema de download de APK com permissão de fontes desconhecidas
 - [x] Download de APK com barra de progresso
 - [x] Instalação de APK no Android

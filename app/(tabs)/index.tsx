@@ -13,6 +13,7 @@ import { useUpdate } from "@/lib/update-context";
 import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
+import { UpdateFloatButton } from "@/components/update-float-button";
 
 let WebView: any = null;
 if (Platform.OS !== "web") {
@@ -75,15 +76,13 @@ const INJECTED_JS = `
 
 export default function HomeScreen() {
   const colors = useColors();
-  const { handleJsBridgeUpdate, updateAvailable } = useUpdate();
+  const { handleJsBridgeUpdate } = useUpdate();
 
   const webViewRef = useRef<any>(null);
   const [currentUrl, setCurrentUrl] = useState(PRIMARY_URL);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const handleWebViewMessage = useCallback(
     (event: any) => {
@@ -114,14 +113,7 @@ export default function HomeScreen() {
         return;
       }
 
-      setIsDownloading(true);
-      setDownloadProgress(0);
-
-      const apk = await downloadAPK(url, filename, (progress) => {
-        setDownloadProgress(Math.round(progress * 100));
-      });
-
-      setIsDownloading(false);
+      const apk = await downloadAPK(url, filename);
 
       if (apk && Platform.OS === "android") {
         Alert.alert(
@@ -145,7 +137,6 @@ export default function HomeScreen() {
         Alert.alert("Download iniciado", "O arquivo foi baixado no seu navegador");
       }
     } catch (err: any) {
-      setIsDownloading(false);
       console.error("APK download error:", err);
       Alert.alert("Erro no download", err.message || "Falha ao baixar o arquivo");
     }
@@ -172,27 +163,7 @@ export default function HomeScreen() {
   // Web platform fallback - show iframe
   if (Platform.OS === "web") {
     return (
-      <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
-        {isDownloading && (
-          <View className="px-4 py-2 bg-primary/10">
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-xs text-muted">Baixando...</Text>
-              <Text className="text-xs text-muted">{downloadProgress}%</Text>
-            </View>
-            <View
-              className="h-2 rounded-full overflow-hidden"
-              style={{ backgroundColor: colors.border }}
-            >
-              <View
-                className="h-full rounded-full"
-                style={{
-                  backgroundColor: colors.primary,
-                  width: `${downloadProgress}%`,
-                }}
-              />
-            </View>
-          </View>
-        )}
+      <View style={styles.fullScreen}>
         <View style={styles.webContainer}>
           <iframe
             src={currentUrl}
@@ -204,34 +175,14 @@ export default function HomeScreen() {
             title="Double WebView"
           />
         </View>
-      </ScreenContainer>
+        <UpdateFloatButton />
+      </View>
     );
   }
 
-  // Native WebView - full screen
+  // Native WebView - full screen without any UI
   return (
-    <ScreenContainer className="p-0" edges={["top", "left", "right"]}>
-      {isDownloading && (
-        <View className="px-4 py-2" style={{ backgroundColor: colors.surface }}>
-          <View className="flex-row justify-between mb-1">
-            <Text className="text-xs text-muted">Baixando APK...</Text>
-            <Text className="text-xs text-muted">{downloadProgress}%</Text>
-          </View>
-          <View
-            className="h-2 rounded-full overflow-hidden"
-            style={{ backgroundColor: colors.border }}
-          >
-            <View
-              className="h-full rounded-full"
-              style={{
-                backgroundColor: colors.primary,
-                width: `${downloadProgress}%`,
-              }}
-            />
-          </View>
-        </View>
-      )}
-
+    <View style={styles.fullScreen}>
       {hasError ? (
         <View className="flex-1 items-center justify-center p-6">
           <MaterialIcons name="wifi-off" size={64} color={colors.muted} />
@@ -295,7 +246,7 @@ export default function HomeScreen() {
       {/* Fallback indicator */}
       {usedFallback && !hasError && (
         <View
-          className="absolute bottom-2 left-4 right-4 rounded-lg px-3 py-2 flex-row items-center"
+          className="absolute bottom-20 left-4 right-4 rounded-lg px-3 py-2 flex-row items-center"
           style={{ backgroundColor: colors.warning + "20" }}
         >
           <MaterialIcons name="info-outline" size={16} color={colors.warning} />
@@ -304,11 +255,17 @@ export default function HomeScreen() {
           </Text>
         </View>
       )}
-    </ScreenContainer>
+
+      {/* Update Float Button */}
+      <UpdateFloatButton />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fullScreen: {
+    flex: 1,
+  },
   webview: {
     flex: 1,
   },
