@@ -1,10 +1,9 @@
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -15,7 +14,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tint,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
@@ -31,8 +31,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Início",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="language" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="downloads"
+        options={{
+          title: "Downloads",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="file-download" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="files"
+        options={{
+          title: "Arquivos",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="folder" size={26} color={color} />
+          ),
         }}
       />
     </Tabs>
