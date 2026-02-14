@@ -6,7 +6,7 @@ import type { ExpoConfig } from "expo/config";
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
 // Bundle ID can only contain letters, numbers, and dots
 // Android requires each dot-separated segment to start with a letter
-const rawBundleId = "space.manus.double.app.t20260214032438";
+const rawBundleId = "space.manus.doubleapp.t20260214032438";
 const bundleId =
   rawBundleId
     .replace(/[-_]/g, ".") // Replace hyphens/underscores with dots
@@ -18,7 +18,16 @@ const bundleId =
     .map((segment) => {
       // Android requires each segment to start with a letter
       // Prefix with 'x' if segment starts with a digit
-      return /^[a-zA-Z]/.test(segment) ? segment : "x" + segment;
+      // Also avoid Java keywords like 'double', 'int', 'class', etc.
+      const javaKeywords = ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'false', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'null', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'true', 'try', 'void', 'volatile', 'while'];
+      const isKeyword = javaKeywords.includes(segment.toLowerCase());
+      if (!(/^[a-zA-Z]/.test(segment))) {
+        return "x" + segment;
+      }
+      if (isKeyword) {
+        return "x" + segment;
+      }
+      return segment;
     })
     .join(".") || "space.manus.app";
 // Extract timestamp from bundle ID and prefix with "manus" for deep link scheme
