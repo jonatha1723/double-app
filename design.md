@@ -1,4 +1,4 @@
-# Double App — Design Document
+# Double — Design Document
 
 ## Visão Geral
 
