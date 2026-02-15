@@ -14,6 +14,15 @@ import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
 import { UpdateFloatButton } from "@/components/update-float-button";
+import { ANDROID_BRIDGE_INJECTION } from "@/lib/android-bridge-injection";
+import {
+  requestDownload,
+  requestInstall,
+  checkStatus,
+  deleteFile,
+  openInstaller,
+  requestUnknownSourcesPermission as requestBridgePermission,
+} from "@/lib/android-bridge";
 
 let WebView: any = null;
 if (Platform.OS !== "web") {
@@ -25,25 +34,24 @@ if (Platform.OS !== "web") {
 const PRIMARY_URL = "https://doubleds.vercel.app/";
 const FALLBACK_URL = "https://doubleiasss.vercel.app/";
 
-const INJECTED_JS = `
+const INJECTED_JS = ANDROID_BRIDGE_INJECTION + `
   (function() {
-    // Create AndroidApp bridge for the site to communicate with the app
-    window.AndroidApp = {
-      notifyUpdate: function(version, url, message) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'update',
-          version: version,
-          url: url,
-          message: message
-        }));
-      },
-      downloadAPK: function(url, filename) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'downloadAPK',
-          url: url,
-          filename: filename || 'app.apk'
-        }));
-      }
+    // Legacy AndroidApp bridge for backward compatibility
+    window.AndroidApp = window.Android || {};
+    window.AndroidApp.notifyUpdate = function(version, url, message) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'update',
+        version: version,
+        url: url,
+        message: message
+      }));
+    };
+    window.AndroidApp.downloadAPK = function(url, filename) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'downloadAPK',
+        url: url,
+        filename: filename || 'app.apk'
+      }));
     };
 
     // Intercept download links
@@ -84,6 +92,105 @@ export default function HomeScreen() {
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
 
+  const handleAndroidBridgeMessage = useCallback(async (data: any) => {
+    try {
+      const { method, apkId, url } = data;
+
+      switch (method) {
+        case "requestDownload":
+          if (!apkId || !url) {
+            console.error("Invalid requestDownload parameters");
+            return;
+          }
+          try {
+            await requestDownload(apkId, url);
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onDownloadComplete?.('${apkId}');`
+            );
+          } catch (err: any) {
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onDownloadError?.('${apkId}', '${err.message}');`
+            );
+          }
+          break;
+
+        case "requestInstall":
+          if (!apkId) {
+            console.error("Invalid requestInstall parameters");
+            return;
+          }
+          try {
+            await requestInstall(apkId);
+          } catch (err: any) {
+            Alert.alert("Erro", `Falha ao instalar: ${err.message}`);
+          }
+          break;
+
+        case "checkStatus":
+          if (!apkId) {
+            console.error("Invalid checkStatus parameters");
+            return;
+          }
+          try {
+            const status = await checkStatus(apkId);
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onStatusCheck?.('${apkId}', '${status}');`
+            );
+          } catch (err: any) {
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onStatusError?.('${apkId}', '${err.message}');`
+            );
+          }
+          break;
+
+        case "deleteFile":
+          if (!apkId) {
+            console.error("Invalid deleteFile parameters");
+            return;
+          }
+          try {
+            await deleteFile(apkId);
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onFileDeleted?.('${apkId}');`
+            );
+          } catch (err: any) {
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onDeleteError?.('${apkId}', '${err.message}');`
+            );
+          }
+          break;
+
+        case "openInstaller":
+          if (!apkId) {
+            console.error("Invalid openInstaller parameters");
+            return;
+          }
+          try {
+            await openInstaller(apkId);
+          } catch (err: any) {
+            Alert.alert("Erro", `Falha ao abrir instalador: ${err.message}`);
+          }
+          break;
+
+        case "requestPermission":
+          try {
+            await requestBridgePermission();
+            webViewRef.current?.injectJavaScript(
+              `window.Android?.onPermissionRequested?.();`
+            );
+          } catch (err: any) {
+            console.error("Permission request error:", err);
+          }
+          break;
+
+        default:
+          console.warn(`Unknown Android Bridge method: ${method}`);
+      }
+    } catch (err) {
+      console.error("Android Bridge message error:", err);
+    }
+  }, []);
+
   const handleWebViewMessage = useCallback(
     (event: any) => {
       try {
@@ -93,12 +200,14 @@ export default function HomeScreen() {
           handleJsBridgeUpdate(data.version, data.url, data.message);
         } else if (data.type === "downloadAPK") {
           handleAPKDownload(data.url, data.filename);
+        } else if (data.type === "androidBridge") {
+          handleAndroidBridgeMessage(data);
         }
       } catch (err) {
         console.log("WebView message parse error:", err);
       }
     },
-    [handleJsBridgeUpdate]
+    [handleJsBridgeUpdate, handleAndroidBridgeMessage]
   );
 
   const handleAPKDownload = useCallback(async (url: string, filename: string) => {
@@ -220,6 +329,7 @@ export default function HomeScreen() {
               allowsInlineMediaPlayback
               mediaPlaybackRequiresUserAction={false}
               injectedJavaScript={INJECTED_JS}
+              injectedJavaScriptBeforeContentLoaded={ANDROID_BRIDGE_INJECTION}
               onMessage={handleWebViewMessage}
               onLoadStart={() => setIsLoading(true)}
               onLoadEnd={() => setIsLoading(false)}

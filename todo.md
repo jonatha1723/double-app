@@ -24,3 +24,15 @@
 - [ ] Testes em dispositivo real
 - [ ] Adicionar Google Sign-In
 - [ ] Cache inteligente para uso offline
+
+## Android Bridge (Nova Funcionalidade)
+- [x] Criar Android Bridge com funções de controle
+- [x] Implementar requestDownload (verifica arquivo, baixa se não existe)
+- [x] Implementar requestInstall (abre instalador para APK baixado)
+- [x] Implementar checkStatus (verifica status do APK)
+- [x] Implementar deleteFile (deleta arquivo APK)
+- [x] Implementar openInstaller (abre instalador direto)
+- [x] Implementar requestPermission (solicita permissão de fontes desconhecidas)
+- [x] Integrar Android Bridge no WebView
+- [x] Adicionar injeção de JavaScript para expor bridge ao site
+- [x] Adicionar callbacks para site (onDownloadComplete, onStatusCheck, etc)
