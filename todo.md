@@ -40,12 +40,11 @@
 - [x] Redirecionar para configurações do Android se permissão não concedida
 
 ## Interface de Permissões (Nova Funcionalidade)
-- [x] Criar botão flutuante visível para acessar configurações de fontes desconhecidas
-- [x] Criar tela de configurações/menu dentro do app
-- [x] Adicionar opção para abrir configurações de fontes desconhecidas
-- [x] Adicionar indicador visual de status (permissão ativada/desativada)
+- [x] Remover botão flutuante de configurações
+- [x] Remover tela de configurações/menu do app
+- [x] Manter apenas diálogo de permissão automático
 
 ## Build e Deploy
-- [x] Remover indicador de status de permissão
+- [x] Remover botão flutuante de configurações
 - [x] Projeto pronto para compilação local
 - [x] Documentação de compilação preparada
