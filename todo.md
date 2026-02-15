@@ -38,3 +38,9 @@
 - [x] Adicionar callbacks para site (onDownloadComplete, onStatusCheck, etc)
 - [x] Adicionar diálogo visual de permissão para instalar apps desconhecidos
 - [x] Redirecionar para configurações do Android se permissão não concedida
+
+## Interface de Permissões (Nova Funcionalidade)
+- [x] Criar botão flutuante visível para acessar configurações de fontes desconhecidas
+- [x] Criar tela de configurações/menu dentro do app
+- [x] Adicionar opção para abrir configurações de fontes desconhecidas
+- [x] Adicionar indicador visual de status (permissão ativada/desativada)

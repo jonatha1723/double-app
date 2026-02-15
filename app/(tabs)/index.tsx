@@ -14,6 +14,7 @@ import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
 import { UpdateFloatButton } from "@/components/update-float-button";
+import { SettingsFAB } from "@/components/settings-fab";
 import { ANDROID_BRIDGE_INJECTION } from "@/lib/android-bridge-injection";
 import {
   requestDownload,
@@ -368,6 +369,9 @@ export default function HomeScreen() {
 
       {/* Update Float Button */}
       <UpdateFloatButton />
+
+      {/* Settings FAB */}
+      <SettingsFAB />
     </View>
   );
 }
