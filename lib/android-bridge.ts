@@ -190,16 +190,42 @@ export async function openInstaller(apkId: string): Promise<void> {
       await saveAPKRegistry(registry);
     }
 
-    // Open installer via intent
-    const fileUri = info.localPath.startsWith("file://")
-      ? info.localPath
-      : `file://${info.localPath}`;
+    // Show permission dialog first
+    const dialog = (typeof window !== "undefined" && (window as any).__unknownSourcesDialog) || null;
+    if (dialog && dialog.show) {
+      return new Promise((resolve, reject) => {
+        dialog.show(async () => {
+          try {
+            // Open installer via intent
+            const localPath = info.localPath!;
+            const fileUri = localPath.startsWith("file://")
+              ? localPath
+              : `file://${localPath}`;
 
-    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
-      data: fileUri,
-      flags: 1, // FLAG_ACTIVITY_NEW_TASK
-      type: "application/vnd.android.package-archive",
-    });
+            await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+              data: fileUri,
+              flags: 1, // FLAG_ACTIVITY_NEW_TASK
+              type: "application/vnd.android.package-archive",
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+    } else {
+      // Fallback: open installer directly without dialog
+      const localPath = info.localPath!;
+      const fileUri = localPath.startsWith("file://")
+        ? localPath
+        : `file://${localPath}`;
+
+      await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+        data: fileUri,
+        flags: 1, // FLAG_ACTIVITY_NEW_TASK
+        type: "application/vnd.android.package-archive",
+      });
+    }
   } catch (err: any) {
     console.error("Open installer error:", err);
     throw err;
@@ -257,16 +283,26 @@ export async function deleteFile(apkId: string): Promise<void> {
   }
 }
 
-// Request unknown sources permission
+// Request unknown sources permission with dialog
 export async function requestUnknownSourcesPermission(): Promise<boolean> {
   if (Platform.OS !== "android") {
     return true;
   }
 
   try {
-    // Try to open the unknown sources settings
-    await IntentLauncher.startActivityAsync("android.settings.action.MANAGE_UNKNOWN_APP_SOURCES");
-    return true;
+    // Show the unknown sources dialog
+    const dialog = (typeof window !== "undefined" && (window as any).__unknownSourcesDialog) || null;
+    if (dialog && dialog.show) {
+      return new Promise((resolve) => {
+        dialog.show(() => {
+          resolve(true);
+        });
+      });
+    } else {
+      // Fallback: try to open the unknown sources settings directly
+      await IntentLauncher.startActivityAsync("android.settings.action.MANAGE_UNKNOWN_APP_SOURCES");
+      return true;
+    }
   } catch (err) {
     console.error("Permission request error:", err);
     return false;
@@ -323,8 +359,18 @@ export function createAndroidBridge() {
 
     requestPermission: async () => {
       try {
-        const granted = await requestUnknownSourcesPermission();
-        return JSON.stringify({ success: true, granted });
+        // Show the unknown sources dialog
+        const dialog = (typeof window !== "undefined" && (window as any).__unknownSourcesDialog) || null;
+        if (dialog && dialog.show) {
+          return new Promise((resolve) => {
+            dialog.show(() => {
+              resolve(JSON.stringify({ success: true, granted: true }));
+            });
+          }) as any;
+        } else {
+          const granted = await requestUnknownSourcesPermission();
+          return JSON.stringify({ success: true, granted });
+        }
       } catch (err: any) {
         return JSON.stringify({ success: false, error: err.message });
       }

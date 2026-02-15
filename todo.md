@@ -36,3 +36,5 @@
 - [x] Integrar Android Bridge no WebView
 - [x] Adicionar injeção de JavaScript para expor bridge ao site
 - [x] Adicionar callbacks para site (onDownloadComplete, onStatusCheck, etc)
+- [x] Adicionar diálogo visual de permissão para instalar apps desconhecidos
+- [x] Redirecionar para configurações do Android se permissão não concedida
