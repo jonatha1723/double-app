@@ -44,3 +44,8 @@
 - [x] Criar tela de configurações/menu dentro do app
 - [x] Adicionar opção para abrir configurações de fontes desconhecidas
 - [x] Adicionar indicador visual de status (permissão ativada/desativada)
+
+## Build e Deploy
+- [x] Remover indicador de status de permissão
+- [x] Projeto pronto para compilação local
+- [x] Documentação de compilação preparada
