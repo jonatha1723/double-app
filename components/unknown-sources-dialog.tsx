@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import {
   View,
   Text,
@@ -22,10 +22,10 @@ interface UnknownSourcesDialogProps {
   onPermissionDenied?: () => void;
 }
 
-export function UnknownSourcesDialog({
+export const UnknownSourcesDialog = forwardRef<UnknownSourcesDialogRef, UnknownSourcesDialogProps>(({
   onPermissionGranted,
   onPermissionDenied,
-}: UnknownSourcesDialogProps) {
+}, ref) => {
   const colors = useColors();
   const [visible, setVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +40,11 @@ export function UnknownSourcesDialog({
     setVisible(false);
     setOnConfirm(null);
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    show,
+    hide,
+  }));
 
   const handleOpenSettings = useCallback(async () => {
     if (Platform.OS !== "android") {
@@ -76,206 +81,200 @@ export function UnknownSourcesDialog({
   }, [onPermissionDenied]);
 
   return (
-    <>
-      {/* Expose methods via window for imperative usage */}
-
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCancel}
-      >
-        <View style={styles.overlay}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleCancel}
+    >
+      <View style={styles.overlay}>
+        <View
+          style={[
+            styles.dialog,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          {/* Icon */}
           <View
             style={[
-              styles.dialog,
-              { backgroundColor: colors.surface, borderColor: colors.border },
+              styles.iconContainer,
+              { backgroundColor: colors.primary + "20" },
             ]}
           >
-            {/* Icon */}
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: colors.primary + "20" },
-              ]}
-            >
-              <MaterialIcons
-                name="security"
-                size={48}
-                color={colors.primary}
-              />
-            </View>
+            <MaterialIcons
+              name="security"
+              size={48}
+              color={colors.primary}
+            />
+          </View>
 
-            {/* Title */}
+          {/* Title */}
+          <Text
+            style={[
+              styles.title,
+              { color: colors.foreground },
+            ]}
+          >
+            Permitir instalação de apps desconhecidos?
+          </Text>
+
+          {/* Description */}
+          <Text
+            style={[
+              styles.description,
+              { color: colors.muted },
+            ]}
+          >
+            Para instalar este aplicativo, você precisa permitir a instalação de apps de fontes desconhecidas. Isso será feito apenas uma vez.
+          </Text>
+
+          {/* Warning */}
+          <View
+            style={[
+              styles.warningBox,
+              { backgroundColor: colors.warning + "15", borderColor: colors.warning + "40" },
+            ]}
+          >
+            <MaterialIcons
+              name="info"
+              size={16}
+              color={colors.warning}
+              style={{ marginRight: 8 }}
+            />
             <Text
               style={[
-                styles.title,
+                styles.warningText,
+                { color: colors.warning },
+              ]}
+            >
+              Apenas instale apps de fontes confiáveis
+            </Text>
+          </View>
+
+          {/* Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              onPress={handleCancel}
+              disabled={isLoading}
+              style={[
+                styles.button,
+                styles.cancelButton,
+                { borderColor: colors.border },
+                isLoading && { opacity: 0.5 },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: colors.muted },
+                ]}
+              >
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleOpenSettings}
+              disabled={isLoading}
+              style={[
+                styles.button,
+                styles.confirmButton,
+                { backgroundColor: colors.primary },
+                isLoading && { opacity: 0.7 },
+              ]}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={[styles.buttonText, { color: "#fff" }]}>
+                    Abrindo...
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <MaterialIcons
+                    name="arrow-forward"
+                    size={18}
+                    color="#fff"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.buttonText, { color: "#fff" }]}>
+                    Abrir Configurações
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Steps */}
+          <View style={styles.stepsContainer}>
+            <Text
+              style={[
+                styles.stepsTitle,
                 { color: colors.foreground },
               ]}
             >
-              Permitir instalação de apps desconhecidos?
+              Como fazer:
             </Text>
-
-            {/* Description */}
-            <Text
-              style={[
-                styles.description,
-                { color: colors.muted },
-              ]}
-            >
-              Para instalar este aplicativo, você precisa permitir a instalação de apps de fontes desconhecidas. Isso será feito apenas uma vez.
-            </Text>
-
-            {/* Warning */}
-            <View
-              style={[
-                styles.warningBox,
-                { backgroundColor: colors.warning + "15", borderColor: colors.warning + "40" },
-              ]}
-            >
-              <MaterialIcons
-                name="info"
-                size={16}
-                color={colors.warning}
-                style={{ marginRight: 8 }}
-              />
-              <Text
+            <View style={styles.step}>
+              <View
                 style={[
-                  styles.warningText,
-                  { color: colors.warning },
-                ]}
-              >
-                Apenas instale apps de fontes confiáveis
-              </Text>
-            </View>
-
-            {/* Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                onPress={handleCancel}
-                disabled={isLoading}
-                style={[
-                  styles.button,
-                  styles.cancelButton,
-                  { borderColor: colors.border },
-                  isLoading && { opacity: 0.5 },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    { color: colors.muted },
-                  ]}
-                >
-                  Cancelar
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleOpenSettings}
-                disabled={isLoading}
-                style={[
-                  styles.button,
-                  styles.confirmButton,
+                  styles.stepNumber,
                   { backgroundColor: colors.primary },
-                  isLoading && { opacity: 0.7 },
                 ]}
               >
-                {isLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <Text style={[styles.buttonText, { color: "#fff" }]}>
-                      Abrindo...
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <MaterialIcons
-                      name="arrow-forward"
-                      size={18}
-                      color="#fff"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={[styles.buttonText, { color: "#fff" }]}>
-                      Abrir Configurações
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Steps */}
-            <View style={styles.stepsContainer}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
               <Text
                 style={[
-                  styles.stepsTitle,
-                  { color: colors.foreground },
+                  styles.stepText,
+                  { color: colors.muted },
                 ]}
               >
-                Como fazer:
+                Toque em "Abrir Configurações"
               </Text>
-              <View style={styles.step}>
-                <View
-                  style={[
-                    styles.stepNumber,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Text style={styles.stepNumberText}>1</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.stepText,
-                    { color: colors.muted },
-                  ]}
-                >
-                  Toque em "Abrir Configurações"
-                </Text>
+            </View>
+            <View style={styles.step}>
+              <View
+                style={[
+                  styles.stepNumber,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <Text style={styles.stepNumberText}>2</Text>
               </View>
-              <View style={styles.step}>
-                <View
-                  style={[
-                    styles.stepNumber,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Text style={styles.stepNumberText}>2</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.stepText,
-                    { color: colors.muted },
-                  ]}
-                >
-                  Ative a opção "Permitir desta fonte"
-                </Text>
+              <Text
+                style={[
+                  styles.stepText,
+                  { color: colors.muted },
+                ]}
+              >
+                Ative a opção "Permitir desta fonte"
+              </Text>
+            </View>
+            <View style={styles.step}>
+              <View
+                style={[
+                  styles.stepNumber,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <Text style={styles.stepNumberText}>3</Text>
               </View>
-              <View style={styles.step}>
-                <View
-                  style={[
-                    styles.stepNumber,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Text style={styles.stepNumberText}>3</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.stepText,
-                    { color: colors.muted },
-                  ]}
-                >
-                  Volte e tente instalar novamente
-                </Text>
-              </View>
+              <Text
+                style={[
+                  styles.stepText,
+                  { color: colors.muted },
+                ]}
+              >
+                Volte e tente instalar novamente
+              </Text>
             </View>
           </View>
         </View>
-      </Modal>
-
-
-    </>
+      </View>
+    </Modal>
   );
-}
+});
 
 const styles = StyleSheet.create({
   overlay: {

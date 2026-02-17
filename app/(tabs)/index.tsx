@@ -14,6 +14,8 @@ import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
 import { UpdateFloatButton } from "@/components/update-float-button";
+import { UnknownSourcesDialog, UnknownSourcesDialogRef } from "@/components/unknown-sources-dialog";
+import { SettingsFAB } from "@/components/settings-fab";
 
 import { ANDROID_BRIDGE_INJECTION } from "@/lib/android-bridge-injection";
 import {
@@ -88,10 +90,18 @@ export default function HomeScreen() {
   const { handleJsBridgeUpdate } = useUpdate();
 
   const webViewRef = useRef<any>(null);
+  const unknownSourcesDialogRef = useRef<UnknownSourcesDialogRef>(null);
   const [currentUrl, setCurrentUrl] = useState(PRIMARY_URL);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
+
+  // Set the dialog ref to window for the bridge to use
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__unknownSourcesDialog = unknownSourcesDialogRef.current;
+    }
+  }, []);
 
   const handleAndroidBridgeMessage = useCallback(async (data: any) => {
     try {
@@ -370,7 +380,11 @@ export default function HomeScreen() {
       {/* Update Float Button */}
       <UpdateFloatButton />
 
+      {/* Settings FAB for unknown sources */}
+      <SettingsFAB />
 
+      {/* Unknown Sources Dialog */}
+      <UnknownSourcesDialog ref={unknownSourcesDialogRef} />
     </View>
   );
 }
