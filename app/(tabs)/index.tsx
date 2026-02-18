@@ -7,7 +7,9 @@ import {
   Platform,
   StyleSheet,
   Alert,
+  StatusBar,
 } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 import { ScreenContainer } from "@/components/screen-container";
 import { useUpdate } from "@/lib/update-context";
 import { useColors } from "@/hooks/use-colors";
@@ -46,6 +48,27 @@ const FALLBACK_URL = "https://doubleiasss.vercel.app/";
 
 const INJECTED_JS = ANDROID_BRIDGE_INJECTION + `
   (function() {
+    // Interceptar pedidos de tela cheia do site
+    const originalRequestFullscreen = Element.prototype.requestFullscreen || 
+                                     Element.prototype.webkitRequestFullscreen || 
+                                     Element.prototype.msRequestFullscreen;
+    
+    const originalExitFullscreen = document.exitFullscreen || 
+                                   document.webkitExitFullscreen || 
+                                   document.msExitFullscreen;
+
+    Element.prototype.requestFullscreen = function() {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'fullscreen', value: true }));
+      if (originalRequestFullscreen) return originalRequestFullscreen.apply(this, arguments);
+      return Promise.resolve();
+    };
+
+    document.exitFullscreen = function() {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'fullscreen', value: false }));
+      if (originalExitFullscreen) return originalExitFullscreen.apply(this, arguments);
+      return Promise.resolve();
+    };
+
     // Legacy AndroidApp bridge for backward compatibility
     window.AndroidApp = window.Android || {};
     window.AndroidApp.notifyUpdate = function(version, url, message) {
@@ -103,6 +126,7 @@ export default function HomeScreen() {
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
   const [showInstallNotification, setShowInstallNotification] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [installNotificationData, setInstallNotificationData] = useState({
     title: "",
     message: "",
@@ -110,6 +134,22 @@ export default function HomeScreen() {
     isDownloading: false,
     isInstalling: false,
   });
+
+  // Gerenciar o modo tela cheia dinamicamente
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      if (isFullscreen) {
+        // Ativar modo imersivo (esconder status bar e barra de navegação)
+        StatusBar.setHidden(true);
+        NavigationBar.setVisibilityAsync("hidden");
+        NavigationBar.setBehaviorAsync("inset-touch");
+      } else {
+        // Voltar ao normal
+        StatusBar.setHidden(false);
+        NavigationBar.setVisibilityAsync("visible");
+      }
+    }
+  }, [isFullscreen]);
 
   // Set the dialog ref to window for the bridge to use
   useEffect(() => {
@@ -228,6 +268,8 @@ export default function HomeScreen() {
           handleAPKDownload(data.url, data.filename);
         } else if (data.type === "androidBridge") {
           handleAndroidBridgeMessage(data);
+        } else if (data.type === "fullscreen") {
+          setIsFullscreen(!!data.value);
         }
       } catch (err) {
         console.log("WebView message parse error:", err);
