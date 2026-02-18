@@ -14,9 +14,11 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "qr": "node scripts/generate_qr.mjs"
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "qr": "node scripts/generate_qr.mjs",
+    "build:apk": "node scripts/build-apk.js",
+    "build:apk:eas": "eas build --platform android --local"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
