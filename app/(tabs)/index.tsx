@@ -13,9 +13,8 @@ import { useUpdate } from "@/lib/update-context";
 import { useColors } from "@/hooks/use-colors";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { downloadAPK, installAPK, requestUnknownSourcesPermission } from "@/lib/apk-downloader";
-import { UpdateFloatButton } from "@/components/update-float-button";
 import { UnknownSourcesDialog, UnknownSourcesDialogRef } from "@/components/unknown-sources-dialog";
-import { SettingsFAB } from "@/components/settings-fab";
+import { InstallNotification } from "@/components/install-notification";
 
 import { ANDROID_BRIDGE_INJECTION } from "@/lib/android-bridge-injection";
 import {
@@ -95,6 +94,14 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [showInstallNotification, setShowInstallNotification] = useState(false);
+  const [installNotificationData, setInstallNotificationData] = useState({
+    title: "",
+    message: "",
+    progress: 0,
+    isDownloading: false,
+    isInstalling: false,
+  });
 
   // Set the dialog ref to window for the bridge to use
   useEffect(() => {
@@ -295,7 +302,6 @@ export default function HomeScreen() {
             title="Double WebView"
           />
         </View>
-        <UpdateFloatButton />
       </View>
     );
   }
@@ -377,11 +383,27 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Update Float Button */}
-      <UpdateFloatButton />
 
-      {/* Settings FAB for unknown sources */}
-      <SettingsFAB />
+
+
+
+      {/* Install Notification */}
+      <InstallNotification
+        visible={showInstallNotification}
+        title={installNotificationData.title}
+        message={installNotificationData.message}
+        progress={installNotificationData.progress}
+        isDownloading={installNotificationData.isDownloading}
+        isInstalling={installNotificationData.isInstalling}
+        onInstall={() => {
+          setInstallNotificationData(prev => ({
+            ...prev,
+            isInstalling: true,
+          }));
+          setTimeout(() => setShowInstallNotification(false), 2000);
+        }}
+        onCancel={() => setShowInstallNotification(false)}
+      />
 
       {/* Unknown Sources Dialog */}
       <UnknownSourcesDialog ref={unknownSourcesDialogRef} />

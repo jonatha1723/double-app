@@ -48,3 +48,9 @@
 - [x] Remover botão flutuante de configurações
 - [x] Projeto pronto para compilação local
 - [x] Documentação de compilação preparada
+
+## Melhorias Finais
+- [x] Remover botão flutuante de atualização
+- [x] Criar nova notificação visual para instalação de APK
+- [x] Melhorar UX do diálogo de permissão
+- [x] Testar sem erros
