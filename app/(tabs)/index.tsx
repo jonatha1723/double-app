@@ -27,9 +27,17 @@ import {
 } from "@/lib/android-bridge";
 
 let WebView: any = null;
+let defaultUserAgent: string | undefined = undefined;
+
 if (Platform.OS !== "web") {
   try {
     WebView = require("react-native-webview").default;
+    // Get Chrome User-Agent from system
+    if (Platform.OS === "android") {
+      const { WebView: NativeWebView } = require("react-native-webview");
+      // Use a standard Chrome Mobile UA as fallback
+      defaultUserAgent = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
+    }
   } catch {}
 }
 
@@ -365,6 +373,7 @@ export default function HomeScreen() {
               )}
               scalesPageToFit={true}
               originWhitelist={["*"]}
+              userAgent={defaultUserAgent}
             />
           )}
         </>
