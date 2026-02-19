@@ -60,3 +60,9 @@
 - [x] Implementar flags corretos para Intent (FLAG_GRANT_READ_URI_PERMISSION)
 - [x] Normalizar URIs de arquivo
 - [x] Adicionar logging para debug
+
+## Tela Cheia Completa
+- [x] Esconder barra de navegação do Android em modo tela cheia
+- [x] Implementar requestFullscreen no Android Bridge
+- [x] Permitir que site controle via JavaScript
+- [x] Adicionar listener de eventos para fullscreen

@@ -155,6 +155,21 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // Listen for fullscreen requests from the site
+  useEffect(() => {
+    const handleFullscreenRequest = (event: any) => {
+      const fullscreenValue = event.detail?.fullscreen || false;
+      setIsFullscreen(fullscreenValue);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("android-fullscreen-request", handleFullscreenRequest);
+      return () => {
+        window.removeEventListener("android-fullscreen-request", handleFullscreenRequest);
+      };
+    }
+  }, []);
+
   const handleAndroidBridgeMessage = useCallback(async (data: any) => {
     try {
       const { method, apkId, url } = data;

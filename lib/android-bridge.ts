@@ -309,6 +309,25 @@ export async function requestUnknownSourcesPermission(): Promise<boolean> {
   }
 }
 
+// Request fullscreen mode (hides navigation bar)
+export async function requestFullscreen(fullscreen: boolean): Promise<void> {
+  if (Platform.OS !== "android") {
+    return;
+  }
+
+  try {
+    // Emit event to React component to handle fullscreen
+    const event = new CustomEvent("android-fullscreen-request", {
+      detail: { fullscreen },
+    });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(event);
+    }
+  } catch (err) {
+    console.error("Fullscreen request error:", err);
+  }
+}
+
 // Create JavaScript interface for WebView
 export function createAndroidBridge() {
   return {
@@ -371,6 +390,15 @@ export function createAndroidBridge() {
           const granted = await requestUnknownSourcesPermission();
           return JSON.stringify({ success: true, granted });
         }
+      } catch (err: any) {
+        return JSON.stringify({ success: false, error: err.message });
+      }
+    },
+
+    requestFullscreen: async (fullscreen: boolean) => {
+      try {
+        await requestFullscreen(fullscreen);
+        return JSON.stringify({ success: true, fullscreen });
       } catch (err: any) {
         return JSON.stringify({ success: false, error: err.message });
       }
