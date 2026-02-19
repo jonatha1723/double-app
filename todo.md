@@ -54,3 +54,9 @@
 - [x] Criar nova notificação visual para instalação de APK
 - [x] Melhorar UX do diálogo de permissão
 - [x] Testar sem erros
+
+## Bug Fix - FileUriExposedException
+- [x] Corrigir FileUriExposedException ao instalar APK
+- [x] Implementar flags corretos para Intent (FLAG_GRANT_READ_URI_PERMISSION)
+- [x] Normalizar URIs de arquivo
+- [x] Adicionar logging para debug

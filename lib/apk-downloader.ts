@@ -96,20 +96,29 @@ export async function downloadAPK(
   }
 }
 
-// Install APK (Android only)
+// Install APK (Android only) - Fixed FileUriExposedException
 export async function installAPK(apkPath: string): Promise<void> {
   if (Platform.OS !== "android") {
     throw new Error("APK installation is only available on Android");
   }
 
   try {
-    // Get file URI
-    const fileUri = apkPath.startsWith("file://") ? apkPath : `file://${apkPath}`;
+    // Normalize the path to ensure it's a proper file URI
+    let fileUri = apkPath;
+    
+    // If it's a plain file path, convert to file:// URI
+    if (!fileUri.startsWith("file://") && !fileUri.startsWith("content://")) {
+      fileUri = `file://${apkPath}`;
+    }
 
-    // Launch intent to install APK
+    console.log("Installing APK from:", fileUri);
+
+    // Launch intent to install APK with proper flags
+    // FLAG_GRANT_READ_URI_PERMISSION (0x00000001) is needed for content:// URIs
+    // FLAG_ACTIVITY_NEW_TASK (0x10000000) is needed to start activity from non-activity context
     await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
       data: fileUri,
-      flags: 1, // FLAG_ACTIVITY_NEW_TASK
+      flags: 268435457, // FLAG_ACTIVITY_NEW_TASK | FLAG_GRANT_READ_URI_PERMISSION
       type: "application/vnd.android.package-archive",
     });
   } catch (err) {
