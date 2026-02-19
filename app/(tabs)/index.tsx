@@ -9,7 +9,7 @@ import {
   Alert,
   StatusBar,
 } from "react-native";
-import * as NavigationBar from "expo-navigation-bar";
+
 import { ScreenContainer } from "@/components/screen-container";
 import { useUpdate } from "@/lib/update-context";
 import { useColors } from "@/hooks/use-colors";
@@ -139,14 +139,11 @@ export default function HomeScreen() {
   useEffect(() => {
     if (Platform.OS === "android") {
       if (isFullscreen) {
-        // Ativar modo imersivo (esconder status bar e barra de navegação)
+        // Ativar modo imersivo (esconder status bar)
         StatusBar.setHidden(true);
-        NavigationBar.setVisibilityAsync("hidden");
-        NavigationBar.setBehaviorAsync("inset-touch");
       } else {
         // Voltar ao normal
         StatusBar.setHidden(false);
-        NavigationBar.setVisibilityAsync("visible");
       }
     }
   }, [isFullscreen]);
