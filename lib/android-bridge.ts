@@ -1,4 +1,4 @@
-import { Platform, Alert } from "react-native";
+import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -50,10 +50,15 @@ async function saveAPKRegistry(registry: Record<string, APKInfo>) {
   }
 }
 
-// Get APK info
-export async function getAPKInfo(apkId: string): Promise<APKInfo | null> {
-  const registry = await getAPKRegistry();
-  return registry[apkId] || null;
+// Get APK info by ID
+async function getAPKInfo(apkId: string): Promise<APKInfo | null> {
+  try {
+    const registry = await getAPKRegistry();
+    return registry[apkId] || null;
+  } catch (err) {
+    console.error("Failed to get APK info:", err);
+    return null;
+  }
 }
 
 // Check if file exists
@@ -61,168 +66,131 @@ async function fileExists(path: string): Promise<boolean> {
   try {
     const info = await FileSystem.getInfoAsync(path);
     return info.exists;
-  } catch {
+  } catch (err) {
     return false;
   }
 }
 
-// Request download - checks if file exists, downloads if not
-export async function requestDownload(
-  apkId: string,
-  url: string,
-  onProgress?: (progress: number) => void
-): Promise<APKInfo> {
+// Request download of APK
+export async function requestDownload(apkId: string, url: string): Promise<void> {
   try {
     await ensureDownloadsDir();
 
     const registry = await getAPKRegistry();
-    const filename = url.split("/").pop() || `${apkId}.apk`;
+    const filename = `${apkId}.apk`;
     const localPath = `${DOWNLOADS_DIR}${filename}`;
 
-    // Check if file already exists
-    const exists = await fileExists(localPath);
-    if (exists) {
-      const info: APKInfo = {
-        id: apkId,
-        url,
-        filename,
-        status: "downloaded",
-        localPath,
-        downloadedAt: new Date().toISOString(),
-      };
-      registry[apkId] = info;
-      await saveAPKRegistry(registry);
-      return info;
+    // Check if already downloaded
+    if (registry[apkId] && registry[apkId].status === "downloaded") {
+      const exists = await fileExists(registry[apkId].localPath!);
+      if (exists) {
+        console.log("APK already downloaded:", apkId);
+        return;
+      }
     }
 
-    // File doesn't exist, start download
-    const info: APKInfo = {
+    // Update status to downloading
+    registry[apkId] = {
       id: apkId,
       url,
       filename,
       status: "downloading",
+      localPath,
+      downloadedAt: new Date().toISOString(),
     };
-    registry[apkId] = info;
     await saveAPKRegistry(registry);
 
-    // Download file
-    const downloadResumable = FileSystem.createDownloadResumable(
-      url,
-      localPath,
-      {},
-      (downloadProgress) => {
-        const progress =
-          downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        onProgress?.(progress);
-      }
-    );
-
+    // Download the file
+    const downloadResumable = FileSystem.createDownloadResumable(url, localPath);
     const result = await downloadResumable.downloadAsync();
+
     if (!result) {
       throw new Error("Download failed");
     }
 
-    // Update registry with downloaded info
-    info.status = "downloaded";
-    info.localPath = result.uri;
-    info.downloadedAt = new Date().toISOString();
-    registry[apkId] = info;
+    // Update status to downloaded
+    registry[apkId].status = "downloaded";
+    registry[apkId].localPath = result.uri;
     await saveAPKRegistry(registry);
 
-    return info;
+    console.log("APK downloaded successfully:", apkId);
   } catch (err: any) {
+    console.error("Download error:", err);
     const registry = await getAPKRegistry();
-    const info: APKInfo = {
-      id: apkId,
-      url,
-      filename: url.split("/").pop() || `${apkId}.apk`,
-      status: "error",
-      error: err.message,
-    };
-    registry[apkId] = info;
-    await saveAPKRegistry(registry);
+    if (registry[apkId]) {
+      registry[apkId].status = "error";
+      registry[apkId].error = err.message;
+      await saveAPKRegistry(registry);
+    }
     throw err;
   }
 }
 
-// Request install - opens installer for downloaded APK
+// Request install of APK
 export async function requestInstall(apkId: string): Promise<void> {
-  if (Platform.OS !== "android") {
-    throw new Error("Installation is only available on Android");
-  }
-
   try {
     const info = await getAPKInfo(apkId);
-    if (!info || !info.localPath) {
-      throw new Error("APK not found or not downloaded");
+    if (!info) {
+      throw new Error("APK not found");
     }
 
-    // Check if file exists
-    const exists = await fileExists(info.localPath);
+    if (info.status !== "downloaded") {
+      throw new Error("APK not downloaded yet");
+    }
+
+    const localPath = info.localPath!;
+    const exists = await fileExists(localPath);
     if (!exists) {
       throw new Error("APK file not found");
     }
 
-    // Open installer
-    await openInstaller(apkId);
-  } catch (err: any) {
-    console.error("Install request error:", err);
-    throw err;
-  }
-}
-
-// Open installer directly
-export async function openInstaller(apkId: string): Promise<void> {
-  if (Platform.OS !== "android") {
-    throw new Error("Installation is only available on Android");
-  }
-
-  try {
-    const info = await getAPKInfo(apkId);
-    if (!info || !info.localPath) {
-      throw new Error("APK not found");
-    }
-
-    // Update status
+    // Update status to installing
     const registry = await getAPKRegistry();
-    if (registry[apkId]) {
-      registry[apkId].status = "installing";
-      await saveAPKRegistry(registry);
-    }
+    registry[apkId].status = "installing";
+    await saveAPKRegistry(registry);
 
-    // Show permission dialog first
+    // Show the unknown sources dialog
     const dialog = (typeof window !== "undefined" && (window as any).__unknownSourcesDialog) || null;
     if (dialog && dialog.show) {
       return new Promise((resolve, reject) => {
         dialog.show(async () => {
           try {
-            // Open installer via intent
-            const localPath = info.localPath!;
-            const fileUri = localPath.startsWith("file://")
-              ? localPath
-              : `file://${localPath}`;
+            // Open installer via intent with proper flags
+            let fileUri = localPath;
+            
+            // Normalize URI - ensure file:// prefix
+            if (!fileUri.startsWith("file://")) {
+              fileUri = `file://${fileUri}`;
+            }
+
+            console.log("Opening installer for:", fileUri);
 
             await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
               data: fileUri,
-              flags: 1, // FLAG_ACTIVITY_NEW_TASK
+              flags: 268435457, // FLAG_ACTIVITY_NEW_TASK | FLAG_GRANT_READ_URI_PERMISSION
               type: "application/vnd.android.package-archive",
             });
             resolve();
           } catch (err) {
+            console.error("Installer error:", err);
             reject(err);
           }
         });
       });
     } else {
       // Fallback: open installer directly without dialog
-      const localPath = info.localPath!;
-      const fileUri = localPath.startsWith("file://")
-        ? localPath
-        : `file://${localPath}`;
+      let fileUri = localPath;
+      
+      // Normalize URI - ensure file:// prefix
+      if (!fileUri.startsWith("file://")) {
+        fileUri = `file://${fileUri}`;
+      }
+
+      console.log("Opening installer (fallback) for:", fileUri);
 
       await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
         data: fileUri,
-        flags: 1, // FLAG_ACTIVITY_NEW_TASK
+        flags: 268435457, // FLAG_ACTIVITY_NEW_TASK | FLAG_GRANT_READ_URI_PERMISSION
         type: "application/vnd.android.package-archive",
       });
     }
@@ -317,11 +285,16 @@ export async function requestFullscreen(fullscreen: boolean): Promise<void> {
 
   try {
     // Emit event to React component to handle fullscreen
-    const event = new CustomEvent("android-fullscreen-request", {
-      detail: { fullscreen },
-    });
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(event);
+    if (typeof window !== "undefined" && window.dispatchEvent) {
+      try {
+        const event = new (window as any).CustomEvent("android-fullscreen-request", {
+          detail: { fullscreen },
+        });
+        window.dispatchEvent(event);
+      } catch (e) {
+        // Fallback: use simple event
+        console.log("Fullscreen request:", fullscreen);
+      }
     }
   } catch (err) {
     console.error("Fullscreen request error:", err);
@@ -369,7 +342,7 @@ export function createAndroidBridge() {
 
     openInstaller: async (apkId: string) => {
       try {
-        await openInstaller(apkId);
+        await requestInstall(apkId);
         return JSON.stringify({ success: true, apkId });
       } catch (err: any) {
         return JSON.stringify({ success: false, error: err.message });

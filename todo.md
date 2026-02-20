@@ -72,3 +72,9 @@
 - [x] Remover UnknownSourcesDialog do root layout
 - [x] Remover código morto de dialogRef
 - [x] Sem erros TypeScript
+
+## Bug Fix - Falhas Contínuas
+- [x] Identificar causa das falhas contínuas (FileUriExposedException em android-bridge)
+- [x] Corrigir flags em openInstaller (usar 268435457)
+- [x] Adicionar try/catch para CustomEvent
+- [x] Sem erros TypeScript

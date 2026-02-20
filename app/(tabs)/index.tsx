@@ -24,7 +24,6 @@ import {
   requestInstall,
   checkStatus,
   deleteFile,
-  openInstaller,
   requestUnknownSourcesPermission as requestBridgePermission,
 } from "@/lib/android-bridge";
 
@@ -244,7 +243,7 @@ export default function HomeScreen() {
             return;
           }
           try {
-            await openInstaller(apkId);
+            await requestInstall(apkId);
           } catch (err: any) {
             Alert.alert("Erro", `Falha ao abrir instalador: ${err.message}`);
           }
