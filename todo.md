@@ -78,3 +78,9 @@
 - [x] Corrigir flags em openInstaller (usar 268435457)
 - [x] Adicionar try/catch para CustomEvent
 - [x] Sem erros TypeScript
+
+## Bug Fix - Crash ao Abrir App
+- [x] Simplificar código de inicialização
+- [x] Remover componentes complexos (InstallNotification, UnknownSourcesDialog)
+- [x] Reescrever com WebView básica
+- [x] Sem erros TypeScript
