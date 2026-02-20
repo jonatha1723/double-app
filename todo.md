@@ -66,3 +66,9 @@
 - [x] Implementar requestFullscreen no Android Bridge
 - [x] Permitir que site controle via JavaScript
 - [x] Adicionar listener de eventos para fullscreen
+
+## Bug Fix - Crash de Início
+- [x] Identificar causa do crash (duplicação de UnknownSourcesDialog)
+- [x] Remover UnknownSourcesDialog do root layout
+- [x] Remover código morto de dialogRef
+- [x] Sem erros TypeScript
