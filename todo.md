@@ -84,3 +84,14 @@
 - [x] Remover componentes complexos (InstallNotification, UnknownSourcesDialog)
 - [x] Reescrever com WebView básica
 - [x] Sem erros TypeScript
+
+
+## Restauração de Funcionalidades (Sessão Atual)
+- [x] Restaurar Android Bridge com funções de download e instalação
+- [x] Restaurar componente InstallNotification com animações
+- [x] Implementar sistema de atualizações automáticas persistente
+- [x] Validar diálogo de permissão para fontes desconhecidas
+- [x] Integrar todos os componentes ao home screen
+- [ ] Testar app em dispositivo Android real
+- [ ] Validar comunicação WebView-nativa
+- [ ] Gerar APK final compilado
